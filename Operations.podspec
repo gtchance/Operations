@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = "Operations"
-  s.version           = "2.10.1"
+  s.version           = "3.1.0"
   s.summary           = "Powerful NSOperation subclasses in Swift."
   s.description       = <<-DESC
   
@@ -13,7 +13,6 @@ session Advanced NSOperations: https://developer.apple.com/videos/wwdc/2015/?id=
   s.author            = { "Daniel Thorpe" => "@danthorpe" }
   s.source            = { :git => "https://github.com/danthorpe/Operations.git", :tag => s.version.to_s }
   s.module_name       = 'Operations'
-  s.documentation_url = 'http://docs.danthorpe.me/operations/2.10.0/index.html'
   s.social_media_url  = 'https://twitter.com/danthorpe'
   s.requires_arc      = true
   s.ios.deployment_target = '8.0'
@@ -33,14 +32,18 @@ session Advanced NSOperations: https://developer.apple.com/videos/wwdc/2015/?id=
       'Sources/Features/iOS'
     ]
     ss.ios.exclude_files = [
-      'Sources/Features/Shared/CloudCapability.swift',
       'Sources/Features/Shared/CloudKit',
+      'Sources/Features/Shared/TaskOperation.swift',
       'Sources/Features/iOS/PhotosCapability.swift',
       'Sources/Features/iOS/PassbookCapability.swift'
     ]
     ss.watchos.exclude_files = [
       'Sources/Core/iOS',
-      'Sources/Features/Shared/CloudKit',      
+      'Sources/Features/Shared/CloudKit',
+      'Sources/Features/Shared/ReachabilityCondition.swift',
+      'Sources/Features/Shared/ReachableOperation.swift',
+      'Sources/Features/Shared/Reachability.swift',
+      'Sources/Features/Shared/TaskOperation.swift',      
       'Sources/Features/iOS/LocationCapability.swift',
       'Sources/Features/iOS/LocationOperations.swift',
       'Sources/Features/iOS/PhotosCapability.swift',
@@ -48,12 +51,12 @@ session Advanced NSOperations: https://developer.apple.com/videos/wwdc/2015/?id=
       'Sources/Features/iOS/UserConfirmationCondition.swift',
       'Sources/Features/iOS/UserNotificationCondition.swift',
       'Sources/Features/iOS/WebpageOperation.swift',
-      'Sources/Features/Shared/ReachabilityCondition.swift',
-      'Sources/Features/Shared/ReachableOperation.swift',
-      'Sources/Features/Shared/Reachability.swift'
+      'Sources/Features/iOS/OpenInSafariOperation.swift'
     ]
     ss.tvos.exclude_files = [
       'Sources/Features/Shared/CloudKit',    
+      'Sources/Features/Shared/CalendarCapability.swift',      
+      'Sources/Features/Shared/TaskOperation.swift',                  
       'Sources/Features/iOS/HealthCapability.swift',
       'Sources/Features/iOS/LocationCapability.swift',
       'Sources/Features/iOS/LocationOperations.swift',      
@@ -62,7 +65,7 @@ session Advanced NSOperations: https://developer.apple.com/videos/wwdc/2015/?id=
       'Sources/Features/iOS/RemoteNotificationCondition.swift',
       'Sources/Features/iOS/UserNotificationCondition.swift',
       'Sources/Features/iOS/WebpageOperation.swift',
-      'Sources/Features/Shared/CalendarCapability.swift'
+      'Sources/Features/iOS/OpenInSafariOperation.swift'
     ]
     ss.osx.exclude_files = [
       'Sources/Core/iOS',
@@ -83,16 +86,19 @@ session Advanced NSOperations: https://developer.apple.com/videos/wwdc/2015/?id=
     ss.exclude_files = [
       'Sources/Core/iOS/BackgroundObserver.swift',
       'Sources/Core/iOS/NetworkObserver.swift',
+      'Sources/Features/Shared/TaskOperation.swift',
       'Sources/Features/iOS/HealthCapability.swift',
       'Sources/Features/iOS/LocationCapability.swift',
       'Sources/Features/iOS/LocationOperations.swift',
-      'Sources/Features/iOS/RemoteNotificationCondition.swift',
+      'Sources/Features/iOS/OpenInSafariOperation.swift',      
+      'Sources/Features/iOS/RemoteNotificationCondition.swift',      
       'Sources/Features/iOS/UserNotificationCondition.swift'
     ]
     ss.tvos.exclude_files = [
       'Sources/Features/iOS/PassbookCapability.swift',
       'Sources/Features/iOS/PhotosCapability.swift',
       'Sources/Features/iOS/WebpageOperation.swift',
+      'Sources/Features/iOS/OpenInSafariOperation.swift',      
       'Sources/Features/Shared/CalendarCapability.swift'
     ]
     ss.osx.exclude_files = [

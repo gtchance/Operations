@@ -1,3 +1,116 @@
+# 3.1.0
+
+## Improvements to Result Injection
+
+I’ve made some changes to make working with _result injection_ easier.
+
+1. [OPR-362](https://github.com/danthorpe/Operations/pull/362), [OPR-363](https://github.com/danthorpe/Operations/pull/363), [OPR-378](https://github.com/danthorpe/Operations/pull/378)
+    These changes simplify the core implementation of how result injection works, no longer using any closure capture. Additionally, if the `Requirement` is equal to `Result?`, the framework provides a new API, for _requiring_ that the result is available. For example:
+    
+    ```swift
+    class Foo: Operation, ResultOperationType {
+        var result: String?
+        // etc
+    }
+    
+    class Bar: Operation, AutomaticInjectionOperationType {
+        var requirement: String = “default value”
+        // etc
+    }
+    
+    let foo = Foo()
+    let bar = Bar()
+    bar.requireResultFromDependency(foo)
+    ```
+    
+    Now, if `foo` finishes with a nil `result` value, `bar` will be automatically cancelled with an `AutomaticInjectionError.RequirementNotSatisfied` error. And it’s no longer necessary to `guard let` unwrap the requirement in the `execute()` method.
+    
+    This works well in situations where the `requirement` property is not an optional, but can be set with a default value.
+   
+## Improvements to Conditions
+
+I’ve made some changes to improve working with `Condition`s. The focus here has been to support more subtle/complex dependency graphs, and suppressing errors resulting from failed conditions. 
+
+2. [OPR-379](https://github.com/danthorpe/Operations/pull/379), [OPR-386](https://github.com/danthorpe/Operations/pull/386) Fixes some unexpected behaviour where indirect dependencies (i.e. dependencies of a condition) which are also direct dependencies got added to the queue more than once. This was fixed more generally to avoid adding operations which are already enqueued.
+3. [OPR-385](https://github.com/danthorpe/Operations/pull/385), [OPR-390](https://github.com/danthorpe/Operations/pull/390), [OPR-397](https://github.com/danthorpe/Operations/pull/397) Adds support for ignoring condition failures
+
+    In some situations, it can be beneficial for an operation to not collect an error if an attached condition fails. To support this, `ConditionResult` now has an `.Ignored` case, which can be used to just cancel the attached `Operation` but without an error.
+    
+    To make this easier, a new condition, `IgnoredCondition` is provided which composes another condition. It will ignore any failures of the composed condition.
+    
+    In addition, `NoFailedDependenciesCondition` now supports an initialiser where it will ignore any dependencies which are also ignored, rather than failing for cancelations. This can be used like this:
+    
+    ```swift
+    dependency.addCondition(IgnoredCondition(myCondition))
+    operation.addDependency(dependency)
+    operation.addCondition(NoFailedDependenciesCondition(ignoreCancellations: true))
+    ``` 
+    
+    Note that the `ignoreCancellations` argument defaults to false to maintain previous behaviour. Thanks to [@aurelcobb](https://github.com/aurelcobb) for raising this issue.
+
+## API Changes
+
+2. [OPR-361](https://github.com/danthorpe/Operations/pull/361) `GroupOperation`’s queue is now private.
+
+    Given the way that `GroupOperation` works, critically that it acts as its queue’s delegate, this change restricts the ability for that contract to be broken. Specifically, the queue is now private, but its properties are exposed via properties of the group.
+
+    Additionally, the default initialiser of `GroupOperation` now takes an optional `dispatch_queue_t` argument. This dispatch queue is set as the `NSOperationQueue`’s `underlyingQueue` property, and effectively allows the class user to set a target dispatch queue. By default this is `nil`.
+
+    This change will require changes to subclasses which override the default initialiser.
+
+    Thanks to [@swiftlyfalling](https://github.com/swiftlyfalling) for these changes.
+	
+   
+## Bug Fixes
+
+3. [OPR-377](https://github.com/danthorpe/Operations/pull/377) GatedOperation will now cancel its composed operation if the gate is closed.
+4. [OPR-365](https://github.com/danthorpe/Operations/pull/365) Fixes a log message error. Thanks to [@DeFrenZ](https://github.com/DeFrenZ) for this one.
+5. [OPR-382](https://github.com/danthorpe/Operations/pull/382) Fixes an issue where `TaskOperation` was included in non-macOS platforms via CocoaPods.
+
+
+# 3.0.0
+
+🚀🙌 After a significant period of testing, Version 3.0.0 is finally here! Checkout the details below:
+
+## Conditions
+The protocol `OperationCondition` is not deprecated. Instead, conditions should be refactored as subclasses of `Condition` or `ComposedCondition`. Condition itself is an `Operation` subclass, and there is now support in `Operation` for adding conditions like this. Internally `Operation` manages a group operation which is added as a dependency. This group evaluates all of the conditions.
+
+1. [[OPR-286](https://github.com/danthorpe/Operations/pull/286)]: Conditions are now subclasses of `Condition` and `Operation` subclass.
+2. [[OPR-309](https://github.com/danthorpe/Operations/pull/309)]: Fixes a bug with `ComposedCondition`.
+
+## Operation & OperationQueue
+
+3. [[OPR-293](https://github.com/danthorpe/Operations/pull/293)]: Adds `WillCancelObserver` - use will/did cancel observer to handle cancellation.
+4. [[OPR-319](https://github.com/danthorpe/Operations/pull/319)]: Improvements to invoking observers in `Operation`.
+5. [[OPR-353](https://github.com/danthorpe/Operations/pull/353)]: Fixes a bug with Swift 2.* where weak properties are not thread safe when reading. [@swiftlyfalling](https://github.com/swiftlyfalling) for fixing this one!
+6. [[OPR-330](https://github.com/danthorpe/Operations/pull/330)]: Ensures that `NSOperationQueue.mainQueue()` returns an `OperationQueue` instance. Thanks to [@gtchance](https://github.com/gtchance) for this - great spot!
+7. [[OPR-359](https://github.com/danthorpe/Operations/pull/359)]: `Operation.cancel()` is now final, which means that it cannot be overridden. To support effective cancelling in `Operation` subclasses, attach `WillCancelObserver` and `DidCancelObserver` observers to the operation before it is added to a queue. Thanks to [@swiftlyfalling](https://github.com/swiftlyfalling) for adding this.
+8. [[OPR-358](https://github.com/danthorpe/Operations/pull/358)]: [@swiftlyfalling](https://github.com/swiftlyfalling) has done a fantastic job fixing an assortment of thread safety issues in `Operation` and `GroupOperation`. Now cancellation, finishing, logs, and adding operations to groups is a lot safer.
+
+## Features
+9. [[OPR-305](https://github.com/danthorpe/Operations/pull/305), [OPR-306](https://github.com/danthorpe/Operations/pull/306)]: Fixes a bug where `CLLocationManager` would respond with a status of not determined prematurely in some cases. Thanks to [@J-Swift](https://github.com/J-Swift) for the fix!
+10. [[OPR-321](https://github.com/danthorpe/Operations/pull/321)]: Adds support for checking if the current queue is the main queue, without using `NSThread.isMainThread()` API. This technique is used to ensure that `CLLocationManager` is always created on the main queue, regardless of the calling queue. This allows for location operations to be run inside `GroupOperation`s for example. Thanks again to [@J-Swift](https://github.com/J-Swift) for reporting this one!
+11. [[OPR-304](https://github.com/danthorpe/Operations/pull/304)]: Vastly improved support for CloudKit errors. Each `CKOperation` defines its own CloudKit error type which provides direct support for managing its subtypes. For example, `CKMarkNotificationsReadOperation` uses an `ErrorType` of `MarkNotificationsReadError<NotificationID>` which stores the marked notification IDs. These error types allow framework consumers to provide effective error handling for `CKPartialError` for example.
+12. [[OPR-327](https://github.com/danthorpe/Operations/pull/327)]: Removes reachability from `CLoudKitOperation`, now, network reachability will be handled as recommended by Apple, which is to retry using the error information provided. This is in contrast to waiting for the network to be reachable.
+13. [[OPR-312](https://github.com/danthorpe/Operations/pull/312)]: Supports the `enterReaderIfAvailable` configuration of `SFSafariViewController` with `WebpageOperation`. This defaults to false. Thanks to [@blg-andreasbraun](https://github.com/blg-andreasbraun) for adding this!
+14. [[OPR-315](https://github.com/danthorpe/Operations/pull/315)]: Refactors `WebpageOperation` to subclass `ComposedOperation`. Thanks to [@blg-andreasbraun](https://github.com/blg-andreasbraun) for tidying this up!
+15. [[OPR-317](https://github.com/danthorpe/Operations/pull/317)]: Adds an `OpenInSafariOperation`. Thanks to [@blg-andreasbraun](https://github.com/blg-andreasbraun) for adding this!
+16. [[OPR-334](https://github.com/danthorpe/Operations/pull/334), [OPR-351](https://github.com/danthorpe/Operations/pull/351)]: Updates `AlertController` to support action sheets with `UIAletController`. Thanks, again, to [@blg-andreasbraun](https://github.com/blg-andreasbraun), for fixing this!
+17. [[OPR-329](https://github.com/danthorpe/Operations/pull/326)]: Added support for `GroupOperation` subclasses to recover from errors. Thanks to [@gsimmons](https://github.com/gsimmons) for reporting this issue!
+18. [[OPR-348](https://github.com/danthorpe/Operations/pull/348)]: Added the ability for `RepeatedOperation` to reset its configuration block.
+19. [[OPR-294](https://github.com/danthorpe/Operations/pull/294)]: Adds very simplistic support to `CloudKitOperation` to handle `CKLimitExceeded`. Framework consumers should bear in mind however, that this is quite simplistic, and if your object graph uses many (or any) `CKReferences` be careful here. It is generally advised to update `CKReferences` first.
+
+## Miscellaneous issues & bug fixes
+20. [[OPR-302](https://github.com/danthorpe/Operations/pull/302)]: Fixes a incorrect Fix-It hint
+21. [[OPR-303](https://github.com/danthorpe/Operations/pull/303)]: Fixes `.Notice` severity logs.
+22. [[OPR-310](https://github.com/danthorpe/Operations/pull/310)]: Removes an unnecessary `let` statement. Thanks to [@pomozoff](https://github.com/pomozoff) for this one!
+23. [[OPR-324](https://github.com/danthorpe/Operations/pull/324)]: Exposes the `LogSeverity` value to Objective-C. Thanks to [@J-Swift](https://github.com/J-Swift) for this one!
+24. [[OPR-341](https://github.com/danthorpe/Operations/pull/341)]: Makes `UserIntent` accessible from Objective-C. Thanks [@ryanjm](https://github.com/ryanjm) for this one!
+25. [[OPR-338](https://github.com/danthorpe/Operations/pull/338)]: Thanks to [@ryanjm](https://github.com/ryanjm) for fixing an issue which caused the `NetworkObserver` to flicker.
+26. [[OPR-350](https://github.com/danthorpe/Operations/pull/350)]: Turns on Whole Module Optimization for Release configuration builds. Whoops! Sorry!
+
+This is a pretty big release. Thanks so much to all the contributors. I promise that 3.1 will not be too far behind.
+
 # 2.10.1
 
 1. [[OPR-305](https://github.com/danthorpe/Operations/pull/305)]: Resolves an issue where `Capability.Location` can finish early. This can happen on subsequent permission challenges if the app is closed while the permission alert is on screen. It appears to be some slightly unexpected behavior of `CLLocationManager` informing its delegate immediately that the status is `.NotDetermined`. Lots of thanks to [J-Swift](https://github.com/J-Swift) for finding, explaining to me, and providing a fix for this issue!  
